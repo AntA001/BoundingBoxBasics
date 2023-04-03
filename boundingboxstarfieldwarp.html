@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>
+			Bounding Box Collision Detection in WebGL with Starfield Background and
+			Warp Speed Effect
+		</title>
+		<style>
+			body {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+			}
+			canvas {
+				display: block;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+		<script>
+			// Set up the scene, camera, and renderer
+			const scene = new THREE.Scene();
+			const camera = new THREE.PerspectiveCamera(
+				75,
+				window.innerWidth / window.innerHeight,
+				0.1,
+				1000
+			);
+			camera.position.z = 25;
+			const renderer = new THREE.WebGLRenderer();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+
+			// Add a cube to act as an obstacle
+			const obstacleGeometry = new THREE.BoxGeometry(5, 5, 5);
+			const obstacleMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+			const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+			obstacle.position.set(0, 0, -10);
+			scene.add(obstacle);
+
+			// Add a cube to act as the player
+			const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
+			const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+			const player = new THREE.Mesh(playerGeometry, playerMaterial);
+			player.position.set(5, 0, 0);
+			scene.add(player);
+
+			// Set up the bounding boxes
+			const playerBoundingBox = new THREE.Box3().setFromObject(player);
+			const obstacleBoundingBox = new THREE.Box3().setFromObject(obstacle);
+
+			// Move the player based on keyboard input
+			const keyboard = {};
+			document.addEventListener("keydown", (event) => {
+				keyboard[event.key] = true;
+			});
+			document.addEventListener("keyup", (event) => {
+				keyboard[event.key] = false;
+			});
+
+			// Add the starfield background
+			const starsGeometry = new THREE.BufferGeometry();
+			const textureLoader = new THREE.TextureLoader();
+			const starsTexture = textureLoader.load(
+				"https://threejs.org/examples/textures/sprites/disc.png"
+			);
+			const starsMaterial = new THREE.PointsMaterial({
+				color: 0xffffff,
+				size: 0.5,
+				map: starsTexture,
+			});
+			const stars = new THREE.Points(starsGeometry, starsMaterial);
+			scene.add(stars);
+
+			const starCount = 10000;
+			const starSpread = 100;
+			const starVertices = [];
+			for (let i = 0; i < starCount; i++) {
+				const x = THREE.MathUtils.randFloatSpread(starSpread);
+				const y = THREE.MathUtils.randFloatSpread(starSpread);
+				const z = THREE.MathUtils.randFloatSpread(starSpread);
+				starVertices.push(x, y, z);
+			}
+			starsGeometry.setAttribute(
+				"position",
+				new THREE.Float32BufferAttribute(starVertices, 3)
+			);
+
+			// Add warp speed effect
+			const warpGeometry = new THREE.BufferGeometry();
+			const warpMaterial = new THREE.PointsMaterial({
+				color: 0x00ffff,
+				size: 0.5,
+			});
+			const warpPoints = new THREE.Points(warpGeometry, warpMaterial);
+			scene.add(warpPoints);
+
+			const warpVertices = [];
+			const warpCount = 10000;
+			const warpSpread = 100;
+			for (let i = 0; i < warpCount; i++) {
+				const x = THREE.MathUtils.randFloatSpread(warpSpread);
+				const y = THREE.MathUtils.randFloatSpread(warpSpread);
+				const z = THREE.MathUtils.randFloatSpread(warpSpread);
+				warpVertices.push(x, y, z);
+			}
+			warpGeometry.setAttribute(
+				"position",
+				new THREE.Float32BufferAttribute(warpVertices, 3)
+			);
+
+			let warpTime = 0;
+			function animate() {
+				// Move the player based on keyboard input
+				if (keyboard["a"]) player.position.x -= 0.1;
+				if (keyboard["d"]) player.position.x += 0.1;
+				if (keyboard["w"]) player.position.z -= 0.1;
+				if (keyboard["s"]) player.position.z += 0.1;
+
+				// Add warp speed effect
+				warpTime += 0.05;
+				for (let i = 0; i < warpCount; i++) {
+					const x = warpVertices[i * 3];
+					const y = warpVertices[i * 3 + 1];
+					const z = warpVertices[i * 3 + 2];
+					const distance = Math.sqrt(x * x + y * y + z * z);
+					const displacement = Math.sin(distance * 0.1 - warpTime) * 0.5;
+					warpVertices[i * 3] = x + x * displacement;
+					warpVertices[i * 3 + 1] = y + y * displacement;
+					warpVertices[i * 3 + 2] = z + z * displacement;
+				}
+				warpGeometry.setAttribute(
+					"position",
+					new THREE.Float32BufferAttribute(warpVertices, 3)
+				);
+
+				// Check for collisions between the player and the obstacle
+				playerBoundingBox.setFromObject(player);
+				obstacleBoundingBox.setFromObject(obstacle);
+				if (playerBoundingBox.intersectsBox(obstacleBoundingBox)) {
+					alert("Boom!");
+				}
+
+				// Render the scene
+				renderer.render(scene, camera);
+
+				requestAnimationFrame(animate);
+			}
+
+			animate();
+		</script>
+	</body>
+</html>

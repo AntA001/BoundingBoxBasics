@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>K-DOP Collision Detection in WebGL</title>
+		<style>
+			body {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+			}
+			canvas {
+				display: block;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+		<script>
+			// Set up the scene, camera, and renderer
+			const scene = new THREE.Scene();
+			const camera = new THREE.PerspectiveCamera(
+				75,
+				window.innerWidth / window.innerHeight,
+				0.1,
+				1000
+			);
+			camera.position.z = 25;
+			const renderer = new THREE.WebGLRenderer();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+
+			// Add a cube to act as an obstacle
+			const obstacleGeometry = new THREE.BoxGeometry(5, 5, 5);
+			const obstacleMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+			const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+			obstacle.position.set(0, 0, -10);
+			scene.add(obstacle);
+
+			// Add a cube to act as the player
+			const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
+			const playerMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+			const player = new THREE.Mesh(playerGeometry, playerMaterial);
+			player.position.set(5, 0, 0);
+			scene.add(player);
+
+			// Set up the k-DOPs
+			const playerPoints = [
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+			];
+			const obstaclePoints = [
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+				new THREE.Vector3(),
+			];
+
+			// Move the player based on keyboard input
+			const keyboard = {};
+			document.addEventListener("keydown", (event) => {
+				keyboard[event.key] = true;
+			});
+			document.addEventListener("keyup", (event) => {
+				keyboard[event.key] = false;
+			});
+
+			function animate() {
+				// Move the player based on keyboard input
+				if (keyboard["a"]) player.position.x -= 0.1;
+				if (keyboard["d"]) player.position.x += 0.1;
+				if (keyboard["w"]) player.position.z -= 0.1;
+				if (keyboard["s"]) player.position.z += 0.1;
+
+				// Update the k-DOPs
+				player.updateMatrixWorld();
+				obstacle.updateMatrixWorld();
+				playerPoints[0].setFromMatrixPosition(player.matrixWorld);
+				playerPoints[1].setFromMatrixPosition(player.matrixWorld);
+				playerPoints[2].setFromMatrixPosition(player.matrixWorld);
+				playerPoints[3].setFromMatrixPosition(player.matrixWorld);
+				playerPoints[4].setFromMatrixPosition(player.matrixWorld);
+				playerPoints[5].setFromMatrixPosition(player.matrixWorld);
+				playerPoints[6].setFromMatrixPosition(player.matrixWorld);
+				playerPoints[7].setFromMatrixPosition(player.matrixWorld);
+
+				obstaclePoints[0].setFromMatrixPosition(obstacle.matrixWorld);
+				obstaclePoints[1].setFromMatrixPosition(obstacle.matrixWorld);
+				obstaclePoints[2].setFromMatrixPosition(obstacle.matrixWorld);
+				obstaclePoints[3].setFromMatrixPosition(obstacle.matrixWorld);
+				obstaclePoints[4].setFromMatrixPosition(obstacle.matrixWorld);
+				obstaclePoints[5].setFromMatrixPosition(obstacle.matrixWorld);
+				obstaclePoints[6].setFromMatrixPosition(obstacle.matrixWorld);
+				obstaclePoints[7].setFromMatrixPosition(obstacle.matrixWorld);
+				// Define the kDopOverlap function
+				function kDopOverlap(points1, points2) {
+					// Check for overlap along each axis
+					for (let i = 0; i < 3; i++) {
+						let min1 = Infinity,
+							max1 = -Infinity;
+						let min2 = Infinity,
+							max2 = -Infinity;
+						for (let j = 0; j < points1.length; j++) {
+							const val1 = points1[j].toArray()[i];
+							if (val1 < min1) min1 = val1;
+							if (val1 > max1) max1 = val1;
+
+							const val2 = points2[j].toArray()[i];
+							if (val2 < min2) min2 = val2;
+							if (val2 > max2) max2 = val2;
+						}
+						if (max1 < min2 || max2 < min1) return false;
+					}
+					return true;
+				}
+				// Check for collision between the player and obstacle
+				const overlap = kDopOverlap(playerPoints, obstaclePoints);
+				if (overlap) {
+					playerMaterial.color.set(0xff0000);
+				} else {
+					playerMaterial.color.set(0x00ff00);
+				}
+
+				// Render the scene and update the animation
+				renderer.render(scene, camera);
+				requestAnimationFrame(animate);
+			}
+			animate();
+		</script>
+	</body>
+</html>
